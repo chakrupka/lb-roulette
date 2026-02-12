@@ -1,5 +1,6 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, g
 import psycopg2
+from psycopg2 import pool
 from flask_cors import CORS
 import os
 from dotenv import load_dotenv
@@ -9,17 +10,32 @@ CORS(app)
 
 load_dotenv()
 
+db_pool = pool.SimpleConnectionPool(1, 20, os.getenv("DATABASE_URL"))
+
 
 def get_db():
-    return psycopg2.connect(os.getenv("DATABASE_URL"))
+    if "db" not in g:
+        g.db = db_pool.getconn()
+    return g.db
+
+
+@app.teardown_appcontext
+def close_db(e=None):
+    db = g.pop("db", None)
+    if db is not None:
+        db_pool.putconn(db)
 
 
 @app.route("/")
 def hello():
     conn = get_db()
     cur = conn.cursor()
+
     cur.execute("SELECT COUNT(*) FROM films")
     count = cur.fetchone()[0]
+
+    cur.close()
+
     return jsonify(
         {
             "message": f"Welcome to Cha's film database. Currently serving {count} films. Last updated on Febuary 12, 2026"
@@ -35,7 +51,6 @@ def get_films():
     columns = [desc[0] for desc in cur.description]
     films = [dict(zip(columns, row)) for row in cur.fetchall()]
     cur.close()
-    conn.close()
     return jsonify(films)
 
 
@@ -45,11 +60,10 @@ def get_film(film_id):
     cur = conn.cursor()
     cur.execute("SELECT * FROM films WHERE id = %s", (film_id,))
     row = cur.fetchone()
+    columns = [desc[0] for desc in cur.description]
     cur.close()
-    conn.close()
     if not row:
         return jsonify({"error": "Film not found"}), 404
-    columns = [desc[0] for desc in cur.description]
     return jsonify(dict(zip(columns, row)))
 
 
@@ -98,6 +112,40 @@ def random_film():
         conditions.append("countries @> %s")
         params.append(countries)
 
+    actors = request.args.getlist("actor")
+    if actors:
+        conditions.append(
+            """
+            id IN (
+                SELECT fa.film_id
+                FROM film_actors fa
+                INNER JOIN actors a ON fa.actor_id = a.id
+                WHERE a.name = ANY(%s)
+                GROUP BY fa.film_id
+                HAVING COUNT(DISTINCT a.name) = %s
+            )
+        """
+        )
+        params.append(actors)
+        params.append(len(actors))
+
+    directors = request.args.getlist("director")
+    if directors:
+        conditions.append(
+            """
+            id IN (
+                SELECT fd.film_id
+                FROM film_directors fd
+                INNER JOIN directors d ON fd.director_id = d.id
+                WHERE d.name = ANY(%s)
+                GROUP BY fd.film_id
+                HAVING COUNT(DISTINCT d.name) = %s
+            )
+        """
+        )
+        params.append(directors)
+        params.append(len(directors))
+
     query = "SELECT * FROM films"
     if conditions:
         query += " WHERE " + " AND ".join(conditions)
@@ -108,7 +156,6 @@ def random_film():
     columns = [desc[0] for desc in cur.description]
     rows = cur.fetchall()
     cur.close()
-    conn.close()
 
     if not rows:
         return jsonify({"error": "No films match filters"}), 404
@@ -116,5 +163,77 @@ def random_film():
     return jsonify([dict(zip(columns, row)) for row in rows])
 
 
+@app.route("/actors/search")
+def fetch_actors():
+    conn = get_db()
+    cur = conn.cursor()
+
+    query = request.args.get("q", "", type=str).strip()
+
+    if len(query) < 2:
+        return jsonify([])
+
+    cur.execute(
+        """
+        SELECT id, name, film_count
+        FROM actor_film_counts
+        WHERE name ILIKE %s
+        ORDER BY film_count DESC
+        LIMIT 5
+    """,
+        (f"{query}%",),
+    )
+
+    rows = cur.fetchall()
+
+    cur.close()
+
+    return jsonify(
+        [{"id": row[0], "name": row[1], "film_count": row[2]} for row in rows]
+    )
+
+
+@app.route("/directors/search")
+def fetch_directors():
+    conn = get_db()
+    cur = conn.cursor()
+
+    query = request.args.get("q", "", type=str).strip()
+
+    if len(query) < 2:
+        return jsonify([])
+
+    try:
+        cur.execute(
+            """
+            SELECT id, name, film_count, avg_rating
+            FROM director_film_counts
+            WHERE name ILIKE %s
+            ORDER BY film_count DESC
+            LIMIT 5
+        """,
+            (f"{query}%",),
+        )
+
+        rows = cur.fetchall()
+        cur.close()
+
+        return jsonify(
+            [
+                {
+                    "id": row[0],
+                    "name": row[1],
+                    "film_count": row[2],
+                    "avg_rating": row[3],
+                }
+                for row in rows
+            ]
+        )
+
+    except Exception as e:
+        cur.close()
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == "__main__":
-    app.run(debug=False, host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
