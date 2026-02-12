@@ -13,6 +13,8 @@ function App() {
     year_max: "",
     genres: [],
     countries: [],
+    actors: [],
+    directors: [],
   });
   const [films, setFilms] = useState<Film[]>([]);
   const [selectedFilm, setSelectedFilm] = useState<Film | null>(null);
@@ -37,9 +39,13 @@ function App() {
       if (filters.year_max) params.append("year_max", filters.year_max);
       filters.genres.forEach((g) => params.append("genre", g));
       filters.countries.forEach((c) => params.append("country", c));
+      filters.actors.forEach((a) => params.append("actor", a));
+      filters.directors.forEach((d) => params.append("director", d));
       params.append("limit", "50");
 
-      const res = await fetch(`http://127.0.0.1:5001/films/random?${params}`);
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/films/random?${params}`,
+      );
       if (!res.ok) {
         setError("No films match those filters. Try broadening your search.");
         return;

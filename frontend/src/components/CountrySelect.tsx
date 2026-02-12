@@ -14,10 +14,14 @@ export default function CountrySelect({
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
+  const lowerQuery = query.toLowerCase();
   const filtered = ALL_COUNTRIES.filter(
-    (c) =>
-      c.toLowerCase().includes(query.toLowerCase()) && !selected.includes(c),
-  );
+    (c) => c.toLowerCase().includes(lowerQuery) && !selected.includes(c),
+  ).sort((a, b) => {
+    const aPrefix = a.toLowerCase().startsWith(lowerQuery) ? 0 : 1;
+    const bPrefix = b.toLowerCase().startsWith(lowerQuery) ? 0 : 1;
+    return aPrefix - bPrefix;
+  });
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -39,42 +43,48 @@ export default function CountrySelect({
   };
 
   return (
-    <div ref={ref} className="relative">
+    <div className="flex flex-col gap-2" ref={ref}>
       <span className="text-sm text-zinc-400">Countries</span>
-      <div className="flex flex-wrap gap-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 mt-1 focus-within:border-emerald-500 transition">
-        {selected.map((c) => (
-          <button
-            key={c}
-            onClick={() => remove(c)}
-            className="text-xs bg-emerald-600 text-white px-2 py-1 rounded-full flex items-center gap-1 hover:bg-emerald-700 transition cursor-pointer"
-          >
-            {c}
-            <span className="text-base">×</span>
-          </button>
-        ))}
+
+      <div className="relative">
         <input
           type="text"
+          placeholder="Search for a country..."
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
-          placeholder={selected.length === 0 ? "Search countries..." : ""}
-          autoComplete="off"
-          className="bg-transparent text-zinc-100 text-base outline-none flex-1 min-w-25"
+          className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-base text-zinc-100 focus:outline-none focus:border-emerald-500 transition"
         />
+
+        {open && query && filtered.length > 0 && (
+          <div className="absolute z-10 w-full mt-1 bg-zinc-900 border border-zinc-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+            {filtered.slice(0, 10).map((c) => (
+              <button
+                key={c}
+                onClick={() => add(c)}
+                className="w-full text-left px-3 py-2 text-sm text-zinc-100 hover:bg-zinc-800 transition cursor-pointer"
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-      {open && query && filtered.length > 0 && (
-        <div className="absolute z-10 mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-lg max-h-48 overflow-y-auto">
-          {filtered.slice(0, 10).map((c) => (
-            <button
-              key={c}
-              onClick={() => add(c)}
-              className="w-full text-left px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 cursor-pointer"
+
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {selected.map((country) => (
+            <span
+              key={country}
+              onClick={() => remove(country)}
+              className="inline-flex items-center gap-2 text-sm px-3 py-1 rounded-full bg-emerald-600 border-emerald-500 text-white cursor-pointer hover:bg-emerald-700 transition"
             >
-              {c}
-            </button>
+              {country}
+              <span className="text-emerald-200">×</span>
+            </span>
           ))}
         </div>
       )}

@@ -2,6 +2,8 @@ import { useState } from "react";
 import { ALL_GENRES } from "../constants";
 import type { Filters } from "../types";
 import CountrySelect from "./CountrySelect";
+import ActorSelect from "./ActorSelect";
+import DirectorSelect from "./DirectorSelect";
 
 const PREVIEW_COUNT = 3;
 
@@ -14,7 +16,7 @@ export default function FilterPanel({ filters, setFilters }: FilterPanelProps) {
   const [genresExpanded, setGenresExpanded] = useState(false);
 
   const updateField = (
-    field: keyof Omit<Filters, "genres" | "countries">,
+    field: keyof Omit<Filters, "genres" | "countries" | "actors" | "directors">,
     value: string,
   ) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
@@ -136,6 +138,16 @@ export default function FilterPanel({ filters, setFilters }: FilterPanelProps) {
           )}
         </div>
       </div>
+
+      <DirectorSelect
+        selected={filters.directors}
+        onChange={(directors) => setFilters((prev) => ({ ...prev, directors }))}
+      />
+
+      <ActorSelect
+        selected={filters.actors}
+        onChange={(actors) => setFilters((prev) => ({ ...prev, actors }))}
+      />
 
       <CountrySelect
         selected={filters.countries}
