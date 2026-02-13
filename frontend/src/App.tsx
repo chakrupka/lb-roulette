@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Film, Filters } from "./types";
 import FilterPanel from "./components/FilterPanel";
 import RouletteWheel from "./components/RouletteWheel";
@@ -21,6 +21,10 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_URL}/`).catch(() => {});
+  }, []);
 
   const fetchFilms = async () => {
     setLoading(true);
