@@ -12,6 +12,7 @@ function App() {
     year_min: "",
     year_max: "",
     genres: [],
+    genre_mode: "and",
     countries: [],
     actors: [],
     directors: [],
@@ -42,6 +43,7 @@ function App() {
       if (filters.year_min) params.append("year_min", filters.year_min);
       if (filters.year_max) params.append("year_max", filters.year_max);
       filters.genres.forEach((g) => params.append("genre", g));
+      if (filters.genres.length > 1) params.append("genre_mode", filters.genre_mode);
       filters.countries.forEach((c) => params.append("country", c));
       filters.actors.forEach((a) => params.append("actor", a));
       filters.directors.forEach((d) => params.append("director", d));

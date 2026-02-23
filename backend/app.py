@@ -104,7 +104,11 @@ def random_film():
 
     genres = request.args.getlist("genre")
     if genres:
-        conditions.append("genres @> %s")
+        genre_mode = request.args.get("genre_mode", "and")
+        if genre_mode == "or":
+            conditions.append("genres && %s")
+        else:
+            conditions.append("genres @> %s")
         params.append(genres)
 
     countries = request.args.getlist("country")

@@ -16,7 +16,10 @@ export default function FilterPanel({ filters, setFilters }: FilterPanelProps) {
   const [genresExpanded, setGenresExpanded] = useState(false);
 
   const updateField = (
-    field: keyof Omit<Filters, "genres" | "countries" | "actors" | "directors">,
+    field: keyof Omit<
+      Filters,
+      "genres" | "genre_mode" | "countries" | "actors" | "directors"
+    >,
     value: string,
   ) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
@@ -103,7 +106,39 @@ export default function FilterPanel({ filters, setFilters }: FilterPanelProps) {
       </div>
 
       <div className="flex flex-col gap-2">
-        <span className="text-sm text-zinc-400">Genres</span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-zinc-400">Genres</span>
+          {filters.genres.length > 1 && (
+            <div className="flex rounded-full overflow-hidden border border-zinc-700 text-xs">
+              <button
+                onClick={() =>
+                  setFilters((prev) => ({ ...prev, genre_mode: "and" }))
+                }
+                className={`px-2.5 py-0.5 transition cursor-pointer ${
+                  filters.genre_mode === "and"
+                    ? "bg-emerald-600 text-white"
+                    : "bg-zinc-800 text-zinc-400 hover:text-zinc-200"
+                }`}
+                title="Films must match ALL selected genres"
+              >
+                AND
+              </button>
+              <button
+                onClick={() =>
+                  setFilters((prev) => ({ ...prev, genre_mode: "or" }))
+                }
+                className={`px-2.5 py-0.5 transition cursor-pointer border-l border-zinc-700 ${
+                  filters.genre_mode === "or"
+                    ? "bg-emerald-600 text-white"
+                    : "bg-zinc-800 text-zinc-400 hover:text-zinc-200"
+                }`}
+                title="Films can match ANY selected genre"
+              >
+                OR
+              </button>
+            </div>
+          )}
+        </div>
         <div
           className={`flex gap-2 ${genresExpanded ? "flex-wrap" : "flex-nowrap overflow-hidden"}`}
         >

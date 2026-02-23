@@ -22,6 +22,7 @@ export interface Filters {
   year_min: string;
   year_max: string;
   genres: string[];
+  genre_mode: "and" | "or";
   countries: string[];
   actors: string[];
   directors: string[];
