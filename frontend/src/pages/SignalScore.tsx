@@ -175,6 +175,10 @@ export default function SignalScore() {
             value={username}
             onChange={(e) => setUsername(e.target.value.toLowerCase())}
             placeholder="e.g. lilfilm"
+            autoComplete="off"
+            autoCapitalize="none"
+            data-1p-ignore
+            data-lpignore="true"
             className="bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-2 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-600"
           />
           <button

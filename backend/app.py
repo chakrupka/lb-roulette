@@ -329,8 +329,7 @@ def compare_profile(username):
 
     cur.execute(
         """
-        SELECT d.name, MIN(elem->>'id') AS slug, COUNT(*) AS film_count,
-               ROUND(AVG(pf.rating - f.rating)::numeric, 2) AS avg_diff
+        SELECT d.name, elem->>'id' AS slug, pf.film_slug
         FROM profile_films pf
         JOIN films f ON f.url = 'https://letterboxd.com/film/' || pf.film_slug || '/'
         JOIN film_directors fd ON fd.film_id = f.id
@@ -340,8 +339,6 @@ def compare_profile(username):
         WHERE pf.profile_id = %s
           AND pf.rating IS NOT NULL
           AND f.rating IS NOT NULL
-        GROUP BY d.name
-        ORDER BY COUNT(*) DESC, d.name
         """,
         (profile_id,),
     )
@@ -363,10 +360,24 @@ def compare_profile(username):
 
     films.sort(key=lambda r: abs(r["diff"]), reverse=True)
 
-    directors = [
-        {"name": name, "slug": slug, "film_count": film_count, "avg_diff": float(avg_diff)}
-        for name, slug, film_count, avg_diff in director_rows
-    ]
+    film_diff_map = {f["slug"]: f["diff"] for f in films}
+    director_map = {}
+    for dir_name, dir_slug, film_slug in director_rows:
+        if dir_name not in director_map:
+            director_map[dir_name] = {"slug": dir_slug, "film_slugs": set()}
+        director_map[dir_name]["film_slugs"].add(film_slug)
+
+    directors = []
+    for dir_name, info in director_map.items():
+        diffs = [film_diff_map[s] for s in info["film_slugs"] if s in film_diff_map]
+        if not diffs:
+            continue
+        directors.append({
+            "name": dir_name,
+            "slug": info["slug"],
+            "film_count": len(diffs),
+            "avg_diff": round(sum(diffs) / len(diffs), 2),
+        })
 
     return jsonify({
         "username": username,
