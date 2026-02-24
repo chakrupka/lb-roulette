@@ -8,7 +8,7 @@ const modules = [
   },
   {
     to: "/signal-score",
-    name: "SignalScore",
+    name: "SignalScore™",
     description: "See how your Letterboxd ratings compare against the crowd.",
   },
 ];

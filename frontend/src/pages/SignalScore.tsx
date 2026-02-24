@@ -159,7 +159,7 @@ export default function SignalScore() {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center px-4 py-12">
       <div className="w-full max-w-2xl mb-8 flex items-center justify-between">
-        <h1 className="text-4xl font-bold tracking-tight">SignalScore</h1>
+        <h1 className="text-4xl font-bold tracking-tight">SignalScore™</h1>
       </div>
 
       {stage === "input" && (
