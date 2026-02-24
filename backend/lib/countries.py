@@ -1,5 +1,3 @@
-# to run: python scraper.py $(head -1 progress.txt)
-
 import requests
 from bs4 import BeautifulSoup
 import json

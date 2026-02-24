@@ -1,9 +1,15 @@
 from flask import Flask, jsonify, request, g
 import psycopg2
+import psycopg2.extras
 from psycopg2 import pool
 from flask_cors import CORS
 import os
+import sys
+from datetime import date
 from dotenv import load_dotenv
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "lib"))
+from profile_scraper import scrape_profile
 
 app = Flask(__name__)
 CORS(app)
@@ -237,6 +243,139 @@ def fetch_directors():
     except Exception as e:
         cur.close()
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/profile/<username>")
+def get_profile(username):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT username, scraped_date FROM profiles WHERE username = %s ORDER BY scraped_date DESC LIMIT 1",
+        (username,),
+    )
+    row = cur.fetchone()
+    cur.close()
+    if not row:
+        return jsonify({"error": "User not found"}), 404
+    return jsonify({"username": row[0], "last_updated": row[1].isoformat()})
+
+
+@app.route("/profile/<username>/update", methods=["POST"])
+def update_profile(username):
+    try:
+        total_films, movies = scrape_profile(username)
+    except Exception as e:
+        return jsonify({"error": f"Scrape failed: {e}"}), 502
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute(
+        "SELECT id FROM profiles WHERE username = %s AND scraped_date = %s",
+        (username, date.today()),
+    )
+    existing = cur.fetchone()
+
+    if existing:
+        profile_id = existing[0]
+        cur.execute("UPDATE profiles SET total_films = %s WHERE id = %s", (total_films, profile_id))
+        cur.execute("DELETE FROM profile_films WHERE profile_id = %s", (profile_id,))
+    else:
+        cur.execute(
+            "INSERT INTO profiles (username, scraped_date, total_films) VALUES (%s, %s, %s) RETURNING id",
+            (username, date.today(), total_films),
+        )
+        profile_id = cur.fetchone()[0]
+
+    psycopg2.extras.execute_values(
+        cur,
+        "INSERT INTO profile_films (profile_id, film_slug, rating) VALUES %s",
+        [(profile_id, m["film"], m["rating"]) for m in movies],
+    )
+    conn.commit()
+    cur.close()
+
+    return jsonify({"username": username, "total_films": total_films, "films_scraped": len(movies)})
+
+
+@app.route("/profile/<username>/compare")
+def compare_profile(username):
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute(
+        "SELECT id, total_films, scraped_date FROM profiles WHERE username = %s ORDER BY scraped_date DESC LIMIT 1",
+        (username,),
+    )
+    row = cur.fetchone()
+    if not row:
+        cur.close()
+        return jsonify({"error": "User not found"}), 404
+
+    profile_id, total_films, scraped_date = row
+
+    cur.execute(
+        """
+        SELECT pf.film_slug, pf.rating, f.title, f.rating AS db_rating
+        FROM profile_films pf
+        JOIN films f ON f.url = 'https://letterboxd.com/film/' || pf.film_slug || '/'
+        WHERE pf.profile_id = %s
+          AND pf.rating IS NOT NULL
+          AND f.rating IS NOT NULL
+        """,
+        (profile_id,),
+    )
+    film_rows = cur.fetchall()
+
+    cur.execute(
+        """
+        SELECT d.name, MIN(elem->>'id') AS slug, COUNT(*) AS film_count,
+               ROUND(AVG(pf.rating - f.rating)::numeric, 2) AS avg_diff
+        FROM profile_films pf
+        JOIN films f ON f.url = 'https://letterboxd.com/film/' || pf.film_slug || '/'
+        JOIN film_directors fd ON fd.film_id = f.id
+        JOIN directors d ON d.id = fd.director_id
+        JOIN LATERAL jsonb_array_elements(f.directors::jsonb) AS elem
+          ON (elem->>'name') = d.name
+        WHERE pf.profile_id = %s
+          AND pf.rating IS NOT NULL
+          AND f.rating IS NOT NULL
+        GROUP BY d.name
+        ORDER BY COUNT(*) DESC, d.name
+        """,
+        (profile_id,),
+    )
+    director_rows = cur.fetchall()
+    cur.close()
+
+    films = []
+    for slug, user_rating, title, db_rating in film_rows:
+        db_rating_rounded = round(db_rating, 1)
+        diff = round(user_rating - db_rating_rounded, 2)
+        films.append({
+            "slug": slug,
+            "title": title,
+            "user_rating": user_rating,
+            "db_rating": db_rating_rounded,
+            "diff": diff,
+            "direction": "higher" if diff > 0 else ("lower" if diff < 0 else "same"),
+        })
+
+    films.sort(key=lambda r: abs(r["diff"]), reverse=True)
+
+    directors = [
+        {"name": name, "slug": slug, "film_count": film_count, "avg_diff": float(avg_diff)}
+        for name, slug, film_count, avg_diff in director_rows
+    ]
+
+    return jsonify({
+        "username": username,
+        "scraped_date": scraped_date.isoformat(),
+        "total_films": total_films,
+        "matched": len(films),
+        "films": films,
+        "directors": directors,
+    })
 
 
 if __name__ == "__main__":
