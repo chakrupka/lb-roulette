@@ -168,7 +168,11 @@ export default function SignalScore() {
           className="w-full max-w-sm flex flex-col gap-3"
         >
           <label className="text-sm text-zinc-400">
-            Enter your Letterboxd username
+            Enter your Letterboxd username (not your profile name)
+          </label>
+          <label className="text-sm text-zinc-400 -mt-2">
+            If you are on mobile, you can find this by going to your profile and
+            clicking the three dots in the top right.
           </label>
           <input
             type="text"
