@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-
 const API = import.meta.env.VITE_API_URL;
 
 type Stage = "input" | "cached" | "loading" | "results" | "error";
@@ -162,12 +160,6 @@ export default function SignalScore() {
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center px-4 py-12">
       <div className="w-full max-w-2xl mb-8 flex items-center justify-between">
         <h1 className="text-4xl font-bold tracking-tight">SignalScore</h1>
-        <Link
-          to="/"
-          className="text-zinc-400 hover:text-zinc-200 text-sm transition"
-        >
-          ← Home
-        </Link>
       </div>
 
       {stage === "input" && (
@@ -302,9 +294,9 @@ export default function SignalScore() {
           <div className="flex gap-2">
             {(
               [
-                ["table", "Table"],
+                ["table", "Films"],
+                ["director", "Directors"],
                 ["heatmap", "Heatmap"],
-                ["director", "Director"],
               ] as [Tab, string][]
             ).map(([t, label]) => (
               <button
@@ -396,7 +388,7 @@ export default function SignalScore() {
                       className="text-right px-2 sm:px-4 py-2 font-normal cursor-pointer select-none hover:text-zinc-300 transition whitespace-nowrap"
                       onClick={() => handleDirectorSort("diff")}
                     >
-                      {`Diff${directorSortKey === "diff" ? (directorSortDir === "asc" ? " ↑" : " ↓") : ""}`}
+                      {`Avg diff${directorSortKey === "diff" ? (directorSortDir === "asc" ? " ↑" : " ↓") : ""}`}
                     </th>
                   </tr>
                 </thead>

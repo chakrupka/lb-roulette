@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import type { Film, Filters } from "../types";
 import FilterPanel from "../components/FilterPanel";
 import RouletteWheel from "../components/RouletteWheel";
@@ -39,17 +38,21 @@ export default function Roulette() {
       const params = new URLSearchParams();
       if (filters.min_rating) params.append("min_rating", filters.min_rating);
       if (filters.max_rating) params.append("max_rating", filters.max_rating);
-      if (filters.min_ratings) params.append("min_ratings", filters.min_ratings);
+      if (filters.min_ratings)
+        params.append("min_ratings", filters.min_ratings);
       if (filters.year_min) params.append("year_min", filters.year_min);
       if (filters.year_max) params.append("year_max", filters.year_max);
       filters.genres.forEach((g) => params.append("genre", g));
-      if (filters.genres.length > 1) params.append("genre_mode", filters.genre_mode);
+      if (filters.genres.length > 1)
+        params.append("genre_mode", filters.genre_mode);
       filters.countries.forEach((c) => params.append("country", c));
       filters.actors.forEach((a) => params.append("actor", a));
       filters.directors.forEach((d) => params.append("director", d));
       params.append("limit", "50");
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/films/random?${params}`);
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/films/random?${params}`,
+      );
       if (!res.ok) {
         setError("No films match those filters. Try broadening your search.");
         return;
@@ -75,10 +78,9 @@ export default function Roulette() {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center px-4 py-12">
       <div className="w-full max-w-md mb-8 flex items-center justify-between">
-        <h1 className="text-4xl font-bold tracking-tight">Letterboxd Roulette</h1>
-        <Link to="/" className="text-zinc-400 hover:text-zinc-200 text-sm transition">
-          ← Home
-        </Link>
+        <h1 className="text-4xl font-bold tracking-tight">
+          Letterboxd Roulette
+        </h1>
       </div>
 
       <FilterPanel filters={filters} setFilters={setFilters} />
