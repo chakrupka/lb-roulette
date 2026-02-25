@@ -72,10 +72,13 @@ export default function FilterPanel({ filters, setFilters }: FilterPanelProps) {
         <label className="flex flex-col gap-1 text-sm text-zinc-400">
           Min # of Ratings
           <input
-            type="number"
+            type="text"
+            inputMode="numeric"
             placeholder="0"
             value={filters.min_ratings}
-            onChange={(e) => updateField("min_ratings", e.target.value)}
+            onChange={(e) =>
+              updateField("min_ratings", e.target.value.replace(/,/g, ""))
+            }
             className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-base text-zinc-100 focus:outline-none focus:border-emerald-500 transition"
           />
         </label>
